@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container">
+    <h2 class="text-center mb-4" style="color: #007bff;">Delete Bot</h2>
+    {% if error %}
+        <div class="alert alert-danger" role="alert">{{ error }}</div>
+    {% endif %}
+    <div class="card p-4 shadow-sm" style="border-radius: 10px;">
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label">Owner Password</label>
+                <input type="password" name="password" class="form-control" required>
+            </div>
+            <input type="hidden" name="bot_id" value="{{ bot_id }}">
+            <button type="submit" class="btn btn-danger w-100">Delete Bot</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
