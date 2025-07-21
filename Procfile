@@ -1,0 +1,1 @@
+web: gunicorn TradersParadise.wsgi:application --log-file -
