@@ -1,0 +1,50 @@
+body {
+    font-family: 'Arial', sans-serif;
+    background: linear-gradient(135deg, #f0f4f8, #d9e2ec);
+    min-height: 100vh;
+}
+.card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
+}
+.card:hover {
+    transform: translateY(-5px);
+}
+.card-title {
+    font-weight: bold;
+    color: #2c3e50;
+}
+.btn-primary {
+    background-color: #3498db;
+    border: none;
+    transition: background-color 0.3s;
+}
+.btn-primary:hover {
+    background-color: #2980b9;
+}
+.btn-success {
+    background-color: #2ecc71;
+    border: none;
+    transition: background-color 0.3s;
+}
+.btn-success:hover {
+    background-color: #27ae60;
+}
+.navbar {
+    border-bottom: 3px solid #3498db;
+    background-color: #2c3e50;
+}
+.navbar-brand {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #ecf0f1;
+}
+.navbar-brand:hover {
+    color: #3498db;
+}
+.alert-danger {
+    background-color: #e74c3c;
+    color: white;
+}
