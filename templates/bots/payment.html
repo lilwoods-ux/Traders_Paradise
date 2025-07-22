@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <div class="card p-4 shadow-sm" style="border-radius: 10px; max-width: 500px; margin: auto;">
+        <h2 class="text-center mb-4" style="color: #007bff;">Payment for {{ bot.name }}</h2>
+        {% if error %}
+            <div class="alert alert-danger" role="alert">{{ error }}</div>
+        {% endif %}
+        <p class="text-center">Price: KES {{ bot.price }}</p>
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label">Phone Number (e.g., 2547XXXXXXXX)</label>
+                <input type="text" name="phone_number" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Pay Now</button>
+        </form>
+        <a href="{% url 'bot_list' %}" class="btn btn-secondary mt-3 w-100">Back to Bots</a>
+    </div>
+</div>
+{% endblock %}

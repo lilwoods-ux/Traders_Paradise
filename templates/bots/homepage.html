@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5 text-center">
+    <h1>Welcome to Traders Paradise</h1>
+    <p class="lead">Discover powerful trading bots to automate your success!</p>
+    {% if user.is_authenticated %}
+        <a href="{% url 'bot_list' %}" class="btn btn-primary btn-lg mt-3">Explore Bots</a>
+    {% else %}
+        <a href="{% url 'login' %}" class="btn btn-primary btn-lg mt-3">Login to Get Started</a>
+        <a href="{% url 'signup' %}" class="btn btn-secondary btn-lg mt-3">Sign Up</a>
+    {% endif %}
+</div>
+{% endblock %}
