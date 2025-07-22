@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-&o4cd9$yiek&6bqhhzhgp94(=llldtzke=&lh2f(76*d5ca8&-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['traders-paradise.onrender.com']
+ALLOWED_HOSTS = ['tradersparadise.onrender.com', 'localhost', '127.0.0.1']
 
 
 # Application definition
@@ -81,18 +81,20 @@ WSGI_APPLICATION = 'Traders_Paradise.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'mydb',
-        'USER': 'postgres',
-        'PASSWORD': 'timothy23',
-        'HOST': 'localhost',
+        'NAME': os.environ.get('DB_NAME'),
+        'USER': os.environ.get('DB_USER'),
+        'PASSWORD': os.environ.get('DB_PASSWORD'),
+        'HOST': os.environ.get('DB_HOST'),
         'PORT': '5432',
-
+    }
 }
 
-}
+
+
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
