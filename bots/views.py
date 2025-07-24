@@ -7,6 +7,7 @@ from django.contrib.auth.decorators import login_required
 from datetime import datetime
 from .models import Bot, BotPurchase
 import json
+
 OWNER_PASSWORD = "lilwoods72"
 
 # Homepage
@@ -85,7 +86,7 @@ def delete_bot(request, bot_id):
             return render(request, 'bots/delete.html', {'error': 'Incorrect password', 'bot_id': bot_id})
     return render(request, 'bots/delete.html', {'bot_id': bot_id})
 
-# Payment via form (M-Pesa simulation)
+# Payment via form (not used by AJAX version)
 @login_required
 def payment(request, bot_id):
     bot = get_object_or_404(Bot, id=bot_id)
@@ -104,12 +105,13 @@ def payment(request, bot_id):
 
     return render(request, 'bots/payment.html', {'bot': bot})
 
+# Payment success page
 @login_required
 def payment_success(request, bot_id):
     bot = get_object_or_404(Bot, id=bot_id)
     return render(request, 'bots/payment_success.html', {'bot': bot})
 
-# M-Pesa STK push API (AJAX/JSON)
+# M-Pesa STK push API (AJAX)
 @login_required
 def stk_push(request):
     if request.method == 'POST':
@@ -119,20 +121,27 @@ def stk_push(request):
             amount = data.get('amount')
             phone = data.get('phone')
 
+            if not bot_id or not amount or not phone:
+                return JsonResponse({"success": False, "message": "Missing required fields."})
+
+            bot = get_object_or_404(Bot, id=bot_id)
             response = simulate_mpesa_stk_push(phone, amount, bot_id)
 
             if response.get("ResponseCode") == "0":
-                # Optionally create a purchase record (can be verified later)
-                return JsonResponse({"status": "success", "message": "Payment initiated"})
-            return JsonResponse({"status": "error", "message": "Payment failed"})
+                # Mark purchase as successful
+                BotPurchase.objects.get_or_create(user=request.user, bot=bot)
+                return JsonResponse({"success": True, "message": "Payment initiated successfully."})
+            else:
+                return JsonResponse({"success": False, "message": "Payment failed. Try again."})
         except Exception as e:
-            return JsonResponse({"error": str(e)}, status=400)
-    return JsonResponse({"error": "Invalid request method"}, status=405)
+            return JsonResponse({"success": False, "message": f"Error: {str(e)}"}, status=400)
 
+    return JsonResponse({"success": False, "message": "Invalid request method"}, status=405)
 
-# Simulated STK push
+# Simulated M-Pesa STK Push (sandbox)
 def simulate_mpesa_stk_push(phone, amount, bot_id):
-    # Replace this with real Safaricom API logic
+    # This is where you would integrate with Safaricom Daraja API
+    print(f"Simulating M-Pesa STK Push to {phone} for KES {amount} for bot {bot_id}")
     return {
         "ResponseCode": "0",
         "CustomerMessage": "Success",
