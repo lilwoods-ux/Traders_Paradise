@@ -15,7 +15,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from .models import Bot, BotPurchase
 
-OWNER_PASSWORD = "lilwoods72"
+OWNER_PASSWORD =  os.environ.get('OWNERS_PASSWORD')
 
 def homepage(request):
     return render(request, 'bots/homepage.html')
