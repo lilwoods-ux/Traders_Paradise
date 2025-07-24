@@ -8,6 +8,14 @@ from .models import Bot
 from datetime import datetime
 
 OWNER_PASSWORD = "lilwoods72"
+from django.contrib.auth import get_user_model
+
+def create_admin_user():
+    user = get_user_model()
+    if not user.objects.filter(username="admin").exists():
+        user.objects.create_superuser("admin", "admin@example.com", "adminpassword123")
+
+create_admin_user()  # Call it when the app starts
 
 # Homepage
 def homepage(request):
