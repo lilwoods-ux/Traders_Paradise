@@ -11,4 +11,5 @@ urlpatterns = [
     path('payment/success/<int:bot_id>/', views.payment_success, name='payment_success'),
     path('api/mpesa/stk-push/', views.stk_push, name='stk_push'),
     path('download/<int:bot_id>/', views.download_bot, name='download_bot'),
+    path('mpesa/callback/', views.mpesa_callback, name='mpesa_callback'),
 ]

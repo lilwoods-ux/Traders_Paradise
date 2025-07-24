@@ -1,14 +1,19 @@
 import os
-from django.conf import settings
+import json
+import base64
+import requests
+from datetime import datetime
 from urllib.parse import quote
+
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import JsonResponse, FileResponse, Http404, HttpResponse
+from django.http import JsonResponse, Http404, HttpResponse
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import csrf_exempt
+
 from .models import Bot, BotPurchase
-import json
 
 OWNER_PASSWORD = "lilwoods72"
 
@@ -87,6 +92,7 @@ def download_bot(request, bot_id):
             raise Http404("File does not exist")
     except Bot.DoesNotExist:
         raise Http404("Bot not found")
+
 @login_required
 def delete_bot(request, bot_id):
     bot = get_object_or_404(Bot, id=bot_id)
@@ -117,11 +123,9 @@ def stk_push(request):
             if not all([bot_id, amount, phone]):
                 return JsonResponse({"error": "Missing fields"}, status=400)
 
-            response = simulate_mpesa_stk_push(phone, amount, bot_id)
+            response = stk_push_mpesa(phone, amount, bot_id)
 
             if response.get("ResponseCode") == "0":
-                bot = get_object_or_404(Bot, id=bot_id)
-                BotPurchase.objects.get_or_create(user=request.user, bot=bot)
                 return JsonResponse({"status": "success", "message": "STK Push sent!"})
             else:
                 return JsonResponse({"status": "error", "message": "STK Push failed."})
@@ -131,10 +135,60 @@ def stk_push(request):
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
-def simulate_mpesa_stk_push(phone, amount, bot_id):
-    return {
-        "ResponseCode": "0",
-        "CustomerMessage": "Success",
-        "MerchantRequestID": "123456",
-        "CheckoutRequestID": "ABCDEF"
+def stk_push_mpesa(phone, amount, bot_id):
+    consumer_key = os.getenv("MPESA_CONSUMER_KEY")
+    consumer_secret = os.getenv("MPESA_CONSUMER_SECRET")
+    business_short_code = os.getenv("MPESA_SHORTCODE", "174379")  # Sandbox default
+    passkey = os.getenv("MPESA_PASSKEY")
+    callback_url = "https://traders-paradise.onrender.com/mpesa/callback/"  # Make sure this is real and public
+
+    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+    password = base64.b64encode((business_short_code + passkey + timestamp).encode()).decode()
+
+    # Access token
+    auth_url = "https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials"
+    auth_response = requests.get(auth_url, auth=(consumer_key, consumer_secret))
+    access_token = auth_response.json().get("access_token")
+
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json"
     }
+
+    stk_url = "https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest"
+
+    payload = {
+        "BusinessShortCode": business_short_code,
+        "Password": password,
+        "Timestamp": timestamp,
+        "TransactionType": "CustomerPayBillOnline",
+        "Amount": amount,
+        "PartyA": phone,
+        "PartyB": business_short_code,
+        "PhoneNumber": phone,
+        "CallBackURL": callback_url,
+        "AccountReference": f"Bot-{bot_id}",
+        "TransactionDesc": "Bot Purchase"
+    }
+
+    response = requests.post(stk_url, json=payload, headers=headers)
+    return response.json()
+
+@csrf_exempt
+def mpesa_callback(request):
+    data = json.loads(request.body.decode('utf-8'))
+    print("M-PESA CALLBACK:", json.dumps(data, indent=2))  # For debugging
+
+    try:
+        result_code = data["Body"]["stkCallback"]["ResultCode"]
+        if result_code == 0:
+            metadata = data["Body"]["stkCallback"]["CallbackMetadata"]["Item"]
+            phone = next(item["Value"] for item in metadata if item["Name"] == "PhoneNumber")
+            amount = next(item["Value"] for item in metadata if item["Name"] == "Amount")
+            # Extract bot_id from AccountReference if needed
+            account_reference = data["Body"]["stkCallback"]["MerchantRequestID"]
+            # Optionally assign bot to user here
+    except Exception as e:
+        print("Callback parsing error:", str(e))
+
+    return JsonResponse({"ResultCode": 0, "ResultDesc": "Accepted"})
