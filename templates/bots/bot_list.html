@@ -1,56 +1,68 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="container mt-4">
-    <div class="row">
-        {% for bot in bots %}
-        <div class="col-md-4 mb-4">
-            <div class="card h-100 shadow-sm">
-                <div class="card-body text-center">
-                    <h5 class="card-title text-primary">{{ bot.name }}</h5>
-                    <p class="card-text text-muted">Price: <strong>KES {{ bot.price }}</strong></p>
+<div class="row">
+  {% for bot in bots %}
+  <div class="col-md-4 mb-4">
+    <div class="card h-100">
+      <div class="card-body">
+        <h5 class="card-title">{{ bot.name }}</h5>
+        <p class="card-text">Price: KES {{ bot.price }}</p>
 
-                    {% if user.is_authenticated %}
-                        {% if bot.id in purchased_bot_ids %}
-                            <a href="{{ bot.file.url }}" class="btn btn-success px-4">✅ Download</a>
-                        {% else %}
-                            <button class="btn btn-primary buy-btn px-4" data-bot-id="{{ bot.id }}" data-bot-price="{{ bot.price }}">
-                                💰 Buy Now
-                            </button>
-                        {% endif %}
-                        <a href="{% url 'delete_bot' bot.id %}" class="btn btn-outline-danger mt-2">🗑 Delete</a>
-                    {% else %}
-                        <a href="{% url 'login' %}" class="btn btn-outline-secondary mt-2">Login to Buy</a>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-        {% endfor %}
+        {% if request.user.is_authenticated %}
+          {% if bot.id in purchased_bot_ids %}
+            <a href="{{ bot.file.url }}" class="btn btn-success">Download</a>
+          {% else %}
+            <!-- Phone number input -->
+            <input type="text" class="form-control mb-2 phone-input" placeholder="Enter phone number">
+
+            <!-- Buy button -->
+            <button class="btn btn-primary buy-btn"
+                    data-bot-id="{{ bot.id }}"
+                    data-price="{{ bot.price }}">
+              Buy Now
+            </button>
+          {% endif %}
+
+          <!-- Delete option for authenticated users -->
+          <a href="{% url 'delete_bot' bot.id %}" class="btn btn-danger mt-2">Delete</a>
+        {% endif %}
+      </div>
     </div>
+  </div>
+  {% endfor %}
 </div>
 
+<!-- JavaScript goes at the bottom of the page -->
 <script>
 document.querySelectorAll('.buy-btn').forEach(button => {
-    button.addEventListener('click', () => {
-        const botId = button.getAttribute('data-bot-id');
-        const botPrice = button.getAttribute('data-bot-price');
-        fetch('/bots/api/mpesa/stk-push/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token }}'
-            },
-            body: JSON.stringify({ bot_id: botId, amount: botPrice })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('✅ Payment initiated. Please check your phone.');
-            } else {
-                alert('⚠️ Payment failed. ' + (data.message || 'Try again later.'));
-            }
-        })
-        .catch(error => alert('❌ Error sending payment request.'));
+  button.addEventListener('click', () => {
+    const botId = button.getAttribute('data-bot-id');
+    const price = button.getAttribute('data-price');
+    const phoneInput = button.parentElement.querySelector('.phone-input');
+    const phone = phoneInput.value;
+
+    if (!phone) {
+      alert("Please enter your phone number.");
+      return;
+    }
+
+    fetch('/bots/api/mpesa/stk-push/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        bot_id: botId,
+        amount: price,
+        phone: phone
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      alert(data.message || 'Payment attempted.');
+    })
+    .catch(error => {
+      alert('Error: ' + error);
     });
+  });
 });
 </script>
 {% endblock %}
