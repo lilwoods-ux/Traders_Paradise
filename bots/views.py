@@ -101,23 +101,31 @@ def payment_success(request, bot_id):
 
 @login_required
 def stk_push(request):
+    print("stk_push endpoint hit")
     if request.method == 'POST':
         try:
+            print("Parsing JSON...")
             data = json.loads(request.body)
+            print("Data received:", data)
+
             bot_id = data.get('bot_id')
             amount = data.get('amount')
             phone = data.get('phone')
-
-            if not phone:
-                return JsonResponse({"status": "error", "message": "Phone number is required."}, status=400)
+            print(f"Bot ID: {bot_id}, Amount: {amount}, Phone: {phone}")
 
             response = simulate_mpesa_stk_push(phone, amount, bot_id)
+            print("Simulated response:", response)
 
             if response.get("ResponseCode") == "0":
-                return JsonResponse({"status": "success", "message": "Payment initiated"})
-            return JsonResponse({"status": "error", "message": "Payment failed"})
+                return JsonResponse({"status": "success", "message": "STK Push sent!"})
+            else:
+                return JsonResponse({"status": "error", "message": "Payment failed"})
+
         except Exception as e:
-            return JsonResponse({"status": "error", "message": str(e)}, status=400)
+            print("Error:", e)
+            return JsonResponse({"error": str(e)}, status=400)
+
+    print("Invalid method")
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
 def simulate_mpesa_stk_push(phone, amount, bot_id):
