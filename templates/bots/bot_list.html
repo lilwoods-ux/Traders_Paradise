@@ -47,21 +47,29 @@ document.querySelectorAll('.buy-btn').forEach(button => {
     }
 
     fetch('/bots/api/mpesa/stk-push/', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        bot_id: botId,
-        amount: price,
-        phone: phone
-      })
-    })
-    .then(response => response.json())
-    .then(data => {
-      alert(data.message || 'Payment attempted.');
-    })
-    .catch(error => {
-      alert('Error: ' + error);
-    });
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    bot_id: botId,
+    amount: price,
+    phone: phone
+  })
+})
+.then(async response => {
+  const contentType = response.headers.get("content-type");
+  if (contentType && contentType.includes("application/json")) {
+    const data = await response.json();
+    alert(data.message || 'Payment attempted.');
+  } else {
+    const text = await response.text();
+    console.error("Not JSON response:", text);
+    alert("Server did not return JSON. Check the backend.");
+  }
+})
+.catch(error => {
+  alert('Network error: ' + error);
+});
+
   });
 });
 </script>
