@@ -4,7 +4,6 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from datetime import datetime
 from .models import Bot, BotPurchase
 import json
 
@@ -80,62 +79,41 @@ def delete_bot(request, bot_id):
     return render(request, 'bots/delete.html', {'bot_id': bot_id})
 
 @login_required
-def payment(request, bot_id):
-    bot = get_object_or_404(Bot, id=bot_id)
-    if request.method == 'POST':
-        phone_number = request.POST.get('phone_number')
-        amount = bot.price
-        response = simulate_mpesa_stk_push(phone_number, amount, bot_id)
-
-        if response.get("ResponseCode") == "0":
-            BotPurchase.objects.get_or_create(user=request.user, bot=bot)
-            return redirect('payment_success', bot_id=bot.id)
-        else:
-            messages.error(request, "Payment failed. Please try again.")
-    return render(request, 'bots/payment.html', {'bot': bot})
-
-@login_required
 def payment_success(request, bot_id):
     bot = get_object_or_404(Bot, id=bot_id)
     return render(request, 'bots/payment_success.html', {'bot': bot})
 
 @login_required
 def stk_push(request):
-    print("stk_push endpoint hit")
     if request.method == 'POST':
         try:
-            print("Parsing JSON...")
-            data = json.loads(request.body)
-            print("Data received:", data)
+            data = json.loads(request.body.decode('utf-8'))
 
             bot_id = data.get('bot_id')
             amount = data.get('amount')
             phone = data.get('phone')
-            print(f"Bot ID: {bot_id}, Amount: {amount}, Phone: {phone}")
+
+            if not all([bot_id, amount, phone]):
+                return JsonResponse({"error": "Missing fields"}, status=400)
 
             response = simulate_mpesa_stk_push(phone, amount, bot_id)
-            print("Simulated response:", response)
 
             if response.get("ResponseCode") == "0":
+                bot = get_object_or_404(Bot, id=bot_id)
+                BotPurchase.objects.get_or_create(user=request.user, bot=bot)
                 return JsonResponse({"status": "success", "message": "STK Push sent!"})
             else:
-                return JsonResponse({"status": "error", "message": "Payment failed"})
+                return JsonResponse({"status": "error", "message": "STK Push failed."})
 
         except Exception as e:
-            print("Error:", e)
-            return JsonResponse({"error": str(e)}, status=400)
+            return JsonResponse({"error": str(e)}, status=500)
 
-    print("Invalid method")
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
 def simulate_mpesa_stk_push(phone, amount, bot_id):
-    # This is just a simulation. You can replace this with the actual Safaricom API.
     return {
         "ResponseCode": "0",
         "CustomerMessage": "Success",
         "MerchantRequestID": "123456",
         "CheckoutRequestID": "ABCDEF"
     }
-
-def get_timestamp():
-    return datetime.now().strftime('%Y%m%d%H%M%S')

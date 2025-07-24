@@ -12,20 +12,18 @@
           {% if bot.id in purchased_bot_ids %}
             <a href="{{ bot.file.url }}" class="btn btn-success">Download</a>
           {% else %}
-            <!-- Phone number input -->
             <input type="text" class="form-control mb-2 phone-input" placeholder="Enter phone number">
-
-            <!-- Buy button -->
             <button class="btn btn-primary buy-btn"
-        data-bot-id="{{ bot.id }}"
-        data-bot-price="{{ bot.price }}">
-        Buy Now
+                    data-bot-id="{{ bot.id }}"
+                    data-bot-price="{{ bot.price }}">
+              Buy Now
             </button>
-
           {% endif %}
-
-          <!-- Delete option for authenticated users -->
-          <a href="{% url 'delete_bot' bot.id %}" class="btn btn-danger mt-2">Delete</a>
+          <form action="{% url 'delete_bot' bot.id %}" method="post" class="mt-2">
+            {% csrf_token %}
+            <input type="password" name="password" placeholder="Password" class="form-control mb-1">
+            <button type="submit" class="btn btn-danger">Delete</button>
+          </form>
         {% endif %}
       </div>
     </div>
@@ -33,12 +31,11 @@
   {% endfor %}
 </div>
 
-<!-- JavaScript goes at the bottom of the page -->
 <script>
 document.querySelectorAll('.buy-btn').forEach(button => {
   button.addEventListener('click', () => {
     const botId = button.getAttribute('data-bot-id');
-    const price = button.getAttribute('data-price');
+    const price = button.getAttribute('data-bot-price');
     const phoneInput = button.parentElement.querySelector('.phone-input');
     const phone = phoneInput.value;
 
@@ -48,30 +45,48 @@ document.querySelectorAll('.buy-btn').forEach(button => {
     }
 
     fetch('/bots/api/mpesa/stk-push/', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    bot_id: botId,
-    amount: price,
-    phone: phone
-  })
-})
-.then(async response => {
-  const contentType = response.headers.get("content-type");
-  if (contentType && contentType.includes("application/json")) {
-    const data = await response.json();
-    alert(data.message || 'Payment attempted.');
-  } else {
-    const text = await response.text();
-    console.error("Not JSON response:", text);
-    alert("Server did not return JSON. Check the backend.");
-  }
-})
-.catch(error => {
-  alert('Network error: ' + error);
-});
-
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken')
+      },
+      body: JSON.stringify({
+        bot_id: botId,
+        amount: price,
+        phone: phone
+      })
+    })
+    .then(async response => {
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        const data = await response.json();
+        alert(data.message || 'Payment attempted.');
+        location.reload();
+      } else {
+        const text = await response.text();
+        console.error("Non-JSON response:", text);
+        alert("Server did not return JSON.");
+      }
+    })
+    .catch(error => {
+      alert('Network error: ' + error);
+    });
   });
 });
+
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+      cookie = cookie.trim();
+      if (cookie.startsWith(name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
 </script>
 {% endblock %}
