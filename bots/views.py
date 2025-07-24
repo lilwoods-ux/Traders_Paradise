@@ -1,5 +1,8 @@
+import os
+from django.conf import settings
+from urllib.parse import quote
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import JsonResponse
+from django.http import JsonResponse, FileResponse, Http404, HttpResponse
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib import messages
@@ -66,6 +69,24 @@ def upload_bot(request):
             return render(request, 'bots/upload.html', {'error': 'Incorrect password'})
     return render(request, 'bots/upload.html')
 
+@login_required
+def download_bot(request, bot_id):
+    try:
+        bot = Bot.objects.get(id=bot_id)
+        if not BotPurchase.objects.filter(user=request.user, bot=bot).exists():
+            return HttpResponse("Unauthorized", status=403)
+
+        file_path = bot.file.path
+        if os.path.exists(file_path):
+            with open(file_path, 'rb') as f:
+                response = HttpResponse(f.read(), content_type="application/octet-stream")
+                filename = os.path.basename(file_path)
+                response['Content-Disposition'] = f'attachment; filename="{quote(filename)}"'
+                return response
+        else:
+            raise Http404("File does not exist")
+    except Bot.DoesNotExist:
+        raise Http404("Bot not found")
 @login_required
 def delete_bot(request, bot_id):
     bot = get_object_or_404(Bot, id=bot_id)
