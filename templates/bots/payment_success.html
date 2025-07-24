@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container text-center mt-5">
+    <div class="alert alert-success">
+        ✅ Payment successful!
+    </div>
+    <h3 class="mb-4">Thank you for your purchase, {{ user.username }} 🎉</h3>
+    <p>You can now download <strong>{{ bot.name }}</strong> below:</p>
+    <a href="{{ bot.file.url }}" class="btn btn-success btn-lg mt-3">⬇️ Download Bot</a>
+    <br><br>
+    <a href="{% url 'bot_list' %}" class="btn btn-outline-primary mt-2">🔙 Back to Bot List</a>
+</div>
+{% endblock %}

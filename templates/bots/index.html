@@ -8,7 +8,7 @@
                 <h5 class="card-title">{{ bot.name }}</h5>
                 <p class="card-text">Price: KES {{ bot.price }}</p>
                 {% if request.user.is_authenticated %}
-                    {% if bot_purchased %}
+                    {% if bot.id in purchased_bot_ids %}
                         <a href="{{ bot.file.url }}" class="btn btn-success">Download</a>
                     {% else %}
                         <button class="btn btn-primary buy-btn" data-bot-id="{{ bot.id }}">Buy Now</button>

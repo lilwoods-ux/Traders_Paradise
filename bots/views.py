@@ -4,18 +4,10 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from .models import Bot
 from datetime import datetime
-
+from .models import Bot, BotPurchase
+import json
 OWNER_PASSWORD = "lilwoods72"
-from django.contrib.auth import get_user_model
-
-def create_admin_user():
-    user = get_user_model()
-    if not user.objects.filter(username="admin").exists():
-        user.objects.create_superuser("admin", "admin@example.com", "adminpassword123")
-
-create_admin_user()  # Call it when the app starts
 
 # Homepage
 def homepage(request):
@@ -56,8 +48,11 @@ def user_logout(request):
 @login_required
 def bot_list(request):
     bots = Bot.objects.all()
-    bot_purchased = {bot.id: False for bot in bots}  # Placeholder logic
-    return render(request, 'bots/index.html', {'bots': bots, 'bot_purchased': bot_purchased})
+    purchased = BotPurchase.objects.filter(user=request.user).values_list('bot_id', flat=True)
+    return render(request, 'bots/bot_list.html', {
+        'bots': bots,
+        'purchased_bot_ids': list(purchased)
+    })
 
 # Upload bot (admin only)
 @login_required
@@ -94,38 +89,46 @@ def delete_bot(request, bot_id):
 @login_required
 def payment(request, bot_id):
     bot = get_object_or_404(Bot, id=bot_id)
+
     if request.method == 'POST':
         phone_number = request.POST.get('phone_number')
         amount = bot.price
 
-        # Simulated M-Pesa STK push
         response = simulate_mpesa_stk_push(phone_number, amount, bot_id)
 
         if response.get("ResponseCode") == "0":
-            # TODO: Save purchase record to DB after callback confirmation
-            return redirect('bot_list')
-        return render(request, 'bots/payment.html', {'error': 'Payment failed', 'bot': bot})
+            BotPurchase.objects.get_or_create(user=request.user, bot=bot)
+            return redirect('payment_success', bot_id=bot.id)
+        else:
+            messages.error(request, "Payment failed. Please try again.")
 
     return render(request, 'bots/payment.html', {'bot': bot})
+
+@login_required
+def payment_success(request, bot_id):
+    bot = get_object_or_404(Bot, id=bot_id)
+    return render(request, 'bots/payment_success.html', {'bot': bot})
 
 # M-Pesa STK push API (AJAX/JSON)
 @login_required
 def stk_push(request):
     if request.method == 'POST':
         try:
-            data = request.POST or request.body
-            bot_id = request.POST.get('bot_id')
-            amount = request.POST.get('amount')
-            phone = request.POST.get('phone')
+            data = json.loads(request.body)
+            bot_id = data.get('bot_id')
+            amount = data.get('amount')
+            phone = data.get('phone')
 
             response = simulate_mpesa_stk_push(phone, amount, bot_id)
 
             if response.get("ResponseCode") == "0":
+                # Optionally create a purchase record (can be verified later)
                 return JsonResponse({"status": "success", "message": "Payment initiated"})
             return JsonResponse({"status": "error", "message": "Payment failed"})
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=400)
     return JsonResponse({"error": "Invalid request method"}, status=405)
+
 
 # Simulated STK push
 def simulate_mpesa_stk_push(phone, amount, bot_id):

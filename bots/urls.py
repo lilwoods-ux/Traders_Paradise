@@ -11,4 +11,5 @@ urlpatterns = [
     path('payment/<int:bot_id>/', views.payment, name='payment'),  # Payment page
     path('login/', views.user_login, name='login'),
     path('logout/', views.user_logout, name='logout'),
+    path('payment/success/<int:bot_id>/', views.payment_success, name='payment_success'),
 ]
